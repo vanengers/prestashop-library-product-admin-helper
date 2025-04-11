@@ -53,7 +53,7 @@ class FormBuilderHelper
         }
         else {
             foreach($form->all() as $child) {
-                if (self::removeFormWithParent($child, $name)) {
+                if (self::removeFormWithParent($child, $name, $parentName)) {
                     return true;
                 }
             }
