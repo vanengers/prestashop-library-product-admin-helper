@@ -44,7 +44,8 @@ class Migration
         }
         foreach ($files as $file) {
             if (pathinfo($file, PATHINFO_EXTENSION) === 'sql') {
-                if (!$this->run(pathinfo($file, PATHINFO_FILENAME))) {
+                $exploded = explode(' ', pathinfo($file, PATHINFO_FILENAME));
+                if (!$this->run($exploded[0])) {
                     return false;
                 }
             }
@@ -52,6 +53,8 @@ class Migration
 
         return true;
     }
+
+    private static $index = [];
 
     /**
      * @param string $filestamp
@@ -65,11 +68,25 @@ class Migration
             $filestamp = str_replace($this->directory, '', $filestamp);
         }
 
-        if (!file_exists($this->directory . $filestamp . '.sql')) {
+        if (empty($filestamp)) {
+            $this->buildIndex();
+        }
+
+        if (!array_key_exists($filestamp, self::$index)) {
             return false;
         }
 
-        $contents = file_get_contents($this->directory . $filestamp . '.sql');
+        if (empty(self::$index[$filestamp])) {
+            return false;
+        }
+
+        $file = self::$index[$filestamp];
+
+        if (!file_exists($this->directory . '/'. $file . '.sql')) {
+            return false;
+        }
+
+        $contents = file_get_contents($this->directory . $file . '.sql');
         if ($contents === false) {
             return false;
         }
@@ -85,5 +102,23 @@ class Migration
         }
 
         return false;
+    }
+
+    /**
+     * @return void
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 11-04-2025
+     */
+    private function buildIndex() : void
+    {
+        $files = scandir($this->directory);
+        if ($files !== false) {
+            foreach ($files as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'sql') {
+                    $exploded = explode(' ', pathinfo($file, PATHINFO_FILENAME));
+                    self::$index[$exploded[0]] = pathinfo($file, PATHINFO_FILENAME);
+                }
+            }
+        }
     }
 }
