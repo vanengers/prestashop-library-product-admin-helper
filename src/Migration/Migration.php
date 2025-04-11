@@ -34,9 +34,16 @@ class Migration
         return $this;
     }
 
-    public function setPrefix(string $prefix)
+    /**
+     * @param string $prefix
+     * @return $this
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 11-04-2025
+     */
+    public function setPrefix(string $prefix) : self
     {
         $this->prefix = $prefix;
+        return $this;
     }
 
     /**
