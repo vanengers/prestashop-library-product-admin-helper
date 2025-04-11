@@ -83,7 +83,7 @@ class Migration
             $filestamp = str_replace($this->directory, '', $filestamp);
         }
 
-        if (empty($filestamp)) {
+        if (empty(self::$index)) {
             $this->buildIndex();
         }
 
@@ -97,7 +97,7 @@ class Migration
 
         $file = self::$index[$filestamp];
 
-        if (!file_exists($this->directory . '/'. $file . '.sql')) {
+        if (!file_exists($this->directory . $file . '.sql')) {
             return false;
         }
 
