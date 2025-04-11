@@ -109,7 +109,7 @@ class Migration
         $sql = explode(';', $contents);
         foreach ($sql as $query) {
             $query = trim($query);
-            $query = str_replace('{_DB_PREFIX}', $this->prefix, $query);
+            $query = str_replace('{_DB_PREFIX_}', $this->prefix, $query);
             if (!empty($query)) {
                 if (!Db::getInstance()->execute($query)) {
                     return false;
