@@ -1,0 +1,30 @@
+{
+  "name": "vanengers/prestashop-library-product-admin-helper",
+  "description": "Helper methods for PrestaShop Products",
+  "type": "library",
+  "license": "mit",
+  "autoload": {
+    "psr-4": {
+      "Vanengers\\PrestaShopLibrary\\ProductAdminHelper\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Vanengers\\PrestaShopLibrary\\ProductAdminHelper\\Tests\\": "tests/"
+    }
+  },
+  "authors": [
+    {
+      "name": "George van Engers",
+      "email": "vanengers@gmail.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "require": {
+    "php": ">=8.1.0",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "10.5.x-dev"
+  }
+}
