@@ -1,5 +1,7 @@
 <?php
 
+namespace Vanengers\PrestaShopLibrary\ProductAdminHelper\Form;
+
 use Symfony\Component\Form\FormBuilderInterface;
 
 class FormBuilderHelper
