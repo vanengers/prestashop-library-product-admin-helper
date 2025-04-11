@@ -10,6 +10,9 @@ class Migration
     /** @var string directory */
     private string $directory = '';
 
+    /** @var string prefix */
+    private string $prefix = '';
+
     public static function getInstance() : self
     {
         if (!self::$instance) {
@@ -29,6 +32,11 @@ class Migration
     {
         $this->directory = $directory;
         return $this;
+    }
+
+    public function setPrefix(string $prefix)
+    {
+        $this->prefix = $prefix;
     }
 
     /**
@@ -94,6 +102,7 @@ class Migration
         $sql = explode(';', $contents);
         foreach ($sql as $query) {
             $query = trim($query);
+            $query = str_replace('{_DB_PREFIX}', $this->prefix, $query);
             if (!empty($query)) {
                 if (!Db::getInstance()->execute($query)) {
                     return false;
