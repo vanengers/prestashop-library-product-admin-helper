@@ -9,7 +9,6 @@ class FormBuilderHelper
     /**
      * @param FormBuilderInterface $form
      * @param string $name
-     * @param string|null $parentName
      * @return bool
      * @author George van Engers <george@dewebsmid.nl>
      * @since 11-04-2025
@@ -48,6 +47,10 @@ class FormBuilderHelper
         ?string $parentName = null
     ): bool
     {
+        if ($parentName === null) {
+            return self::removeForm($form, $name);
+        }
+
         if ($form->has($parentName)) {
             return self::removeForm($form->get($parentName), $name);
         }
