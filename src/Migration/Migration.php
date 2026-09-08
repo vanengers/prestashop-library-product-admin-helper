@@ -13,6 +13,9 @@ class Migration
     /** @var string prefix */
     private string $prefix = '';
 
+    /** @var array<string, string>|null filestamp => filename (without extension), null when not built yet */
+    private ?array $index = null;
+
     public static function getInstance() : self
     {
         if (!self::$instance) {
@@ -30,6 +33,14 @@ class Migration
      */
     public function setDirectory(string $directory) : self
     {
+        $directory = $directory === ''
+            ? ''
+            : rtrim($directory, '/\\') . DIRECTORY_SEPARATOR;
+
+        if ($directory !== $this->directory) {
+            $this->index = null;
+        }
+
         $this->directory = $directory;
         return $this;
     }
@@ -51,25 +62,20 @@ class Migration
      * @author George van Engers <george@dewebsmid.nl>
      * @since 11-04-2025
      */
-    public function runAll()
+    public function runAll() : bool
     {
-        $files = scandir($this->directory);
-        if ($files === false) {
+        if ($this->index === null && !$this->buildIndex()) {
             return false;
         }
-        foreach ($files as $file) {
-            if (pathinfo($file, PATHINFO_EXTENSION) === 'sql') {
-                $exploded = explode(' ', pathinfo($file, PATHINFO_FILENAME));
-                if (!$this->run($exploded[0])) {
-                    return false;
-                }
+
+        foreach (array_keys($this->index) as $filestamp) {
+            if (!$this->run($filestamp)) {
+                return false;
             }
         }
 
         return true;
     }
-
-    private static $index = [];
 
     /**
      * @param string $filestamp
@@ -79,62 +85,108 @@ class Migration
      */
     public function run(string $filestamp = '') : bool
     {
-        if (str_contains($filestamp, $this->directory)) {
-            $filestamp = str_replace($this->directory, '', $filestamp);
-        }
+        $filestamp = $this->normalizeFilestamp($filestamp);
 
-        if (empty(self::$index)) {
-            $this->buildIndex();
-        }
-
-        if (!array_key_exists($filestamp, self::$index)) {
+        if ($this->index === null && !$this->buildIndex()) {
             return false;
         }
 
-        if (empty(self::$index[$filestamp])) {
+        if (empty($this->index[$filestamp])) {
             return false;
         }
 
-        $file = self::$index[$filestamp];
+        $path = $this->directory . $this->index[$filestamp] . '.sql';
 
-        if (!file_exists($this->directory . $file . '.sql')) {
+        if (!is_file($path)) {
             return false;
         }
 
-        $contents = file_get_contents($this->directory . $file . '.sql');
+        $contents = file_get_contents($path);
         if ($contents === false) {
             return false;
         }
 
-        $sql = explode(';', $contents);
-        foreach ($sql as $query) {
+        // Replace the prefix once for the whole file instead of once per query.
+        $contents = str_replace('{_DB_PREFIX_}', $this->prefix, $contents);
+
+        $db = Db::getInstance();
+        foreach (explode(';', $contents) as $query) {
             $query = trim($query);
-            $query = str_replace('{_DB_PREFIX_}', $this->prefix, $query);
-            if (!empty($query)) {
-                if (!Db::getInstance()->execute($query)) {
-                    return false;
-                }
+            if ($query === '') {
+                continue;
+            }
+
+            if (!$db->execute($query)) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
-     * @return void
+     * Accepts a bare filestamp, a filename or a full path and reduces it to the
+     * filestamp used as index key.
+     *
+     * @param string $filestamp
+     * @return string
      * @author George van Engers <george@dewebsmid.nl>
      * @since 11-04-2025
      */
-    private function buildIndex() : void
+    private function normalizeFilestamp(string $filestamp) : string
     {
-        $files = scandir($this->directory);
-        if ($files !== false) {
-            foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'sql') {
-                    $exploded = explode(' ', pathinfo($file, PATHINFO_FILENAME));
-                    self::$index[$exploded[0]] = pathinfo($file, PATHINFO_FILENAME);
-                }
-            }
+        if ($this->directory !== '' && str_contains($filestamp, $this->directory)) {
+            $filestamp = str_replace($this->directory, '', $filestamp);
         }
+
+        if (str_contains($filestamp, '.')) {
+            $filestamp = pathinfo($filestamp, PATHINFO_FILENAME);
+        }
+
+        return self::filestampOf($filestamp);
+    }
+
+    /**
+     * @return bool true when the directory could be read
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 11-04-2025
+     */
+    private function buildIndex() : bool
+    {
+        $this->index = [];
+
+        if ($this->directory === '' || !is_dir($this->directory)) {
+            return false;
+        }
+
+        $files = scandir($this->directory);
+        if ($files === false) {
+            return false;
+        }
+
+        foreach ($files as $file) {
+            // Cheaper than pathinfo() and skips '.' / '..' as well.
+            if (substr($file, -4) !== '.sql') {
+                continue;
+            }
+
+            $name = substr($file, 0, -4);
+            $this->index[self::filestampOf($name)] = $name;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $name
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 11-04-2025
+     */
+    private static function filestampOf(string $name) : string
+    {
+        $stamp = strstr($name, ' ', true);
+
+        return $stamp === false ? $name : $stamp;
     }
 }
